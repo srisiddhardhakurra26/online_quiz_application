@@ -1,11 +1,21 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
-function Header({ isAuthenticated, setIsAuthenticated }) {
+function Header() {
+  const { isAuthenticated, setIsAuthenticated } = useContext(AuthContext);
+  const navigate = useNavigate();
+
   const handleLogout = () => {
+    // Clear all auth-related data
     setIsAuthenticated(false);
+    localStorage.removeItem('token');
     localStorage.removeItem('userId');
+    localStorage.removeItem('username');
+    
+    // Redirect to login page
+    navigate('/login');
   };
 
   return (

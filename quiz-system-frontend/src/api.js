@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// const API_URL = 'http://localhost:8080/api';
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+const API_URL = 'http://localhost:8080/api';
+// const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -16,6 +16,8 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers['Accept'] = 'application/json';
+      config.headers['Content-Type'] = 'application/json';
     }
     return config;
   },
@@ -28,6 +30,13 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response && error.response.status === 401) {
+      // Token is invalid or expired
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('username');
+      window.location.href = '/login';
+    }
     console.error('API Error:', error.response || error);
     return Promise.reject(error);
   }
@@ -35,8 +44,22 @@ api.interceptors.response.use(
 
 // Authentication
 export const registerUser = (userData) => api.post('/auth/signup', userData);
-export const loginUser = (credentials) => api.post('/auth/signin', credentials);
+// export const loginUser = async (credentials) => {
+//   console.log('Sending credentials:', credentials);
+//   return api.post('/auth/signin', credentials);
+// };
 
+export const loginUser = async (credentials) => {
+  console.log('Sending credentials:', JSON.stringify(credentials)); // Modified this line
+  try {
+    const response = await api.post('/auth/signin', credentials);
+    console.log('Server response:', response); // Added this line
+    return response;
+  } catch (error) {
+    console.log('Error details:', error.response?.data); // Added this line
+    throw error;
+  }
+};
 // Quizzes
 export const getAllQuizzes = () => api.get('/quizzes');
 export const getQuizById = async (id) => {

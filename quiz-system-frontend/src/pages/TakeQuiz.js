@@ -15,13 +15,28 @@ function TakeQuiz() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // Define saveQuizState first
+  const saveQuizState = useCallback((quizData, answerData, timeRemaining) => {
+    const stateToSave = {
+      quiz: quizData,
+      answers: answerData,
+      timeLeft: timeRemaining
+    };
+    localStorage.setItem(`quiz_state_${id}`, JSON.stringify(stateToSave));
+  }, [id]);
+
   const handleSubmit = useCallback(async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     try {
       console.log("Submitting answers:", answers);
       const userId = localStorage.getItem('userId');
       const score = await submitQuiz(id, answers, userId);
       console.log("Received score:", score);
+      
+      // Clear saved state on successful submission
+      localStorage.removeItem(`quiz_state_${id}`);
+      localStorage.removeItem(`quiz_start_${id}`);
+
       navigate(`/quiz-results/${id}`, { 
         state: { 
           answers: answers, 
@@ -35,40 +50,80 @@ function TakeQuiz() {
     }
   }, [id, answers, quiz, navigate]);
 
+  // Load saved quiz state
   useEffect(() => {
+    const loadSavedState = () => {
+      const savedState = localStorage.getItem(`quiz_state_${id}`);
+      if (savedState) {
+        const { answers: savedAnswers, timeLeft: savedTime, quiz: savedQuiz } = JSON.parse(savedState);
+        setAnswers(savedAnswers || {});
+        setQuiz(savedQuiz);
+        
+        // Calculate remaining time
+        if (savedTime) {
+          const timePassed = (Date.now() - parseInt(localStorage.getItem(`quiz_start_${id}`))) / 1000;
+          const remainingTime = Math.max(0, savedTime - timePassed);
+          setTimeLeft(Math.floor(remainingTime));
+        }
+        setLoading(false);
+      } else {
+        // Fetch quiz if no saved state
+        fetchQuiz();
+      }
+    };
+
     const fetchQuiz = async () => {
       try {
         const quizData = await getQuizById(id);
         setQuiz(quizData);
         if (quizData.timeLimit) {
-          setTimeLeft(quizData.timeLimit * 60);
+          const initialTime = quizData.timeLimit * 60;
+          setTimeLeft(initialTime);
+          localStorage.setItem(`quiz_start_${id}`, Date.now().toString());
         }
         setLoading(false);
+        
+        // Save initial quiz state
+        saveQuizState(quizData, {}, quizData.timeLimit * 60);
       } catch (error) {
         console.error('Error fetching quiz:', error);
         setError('Failed to load quiz. Please try again.');
         setLoading(false);
       }
     };
-    fetchQuiz();
-  }, [id]);
 
+    loadSavedState();
+
+    // Cleanup function
+    return () => {
+      // Don't clear state on normal navigation
+      if (!document.hidden) {
+        localStorage.removeItem(`quiz_state_${id}`);
+        localStorage.removeItem(`quiz_start_${id}`);
+      }
+    };
+  }, [id, saveQuizState]); // Added saveQuizState to dependency array
+
+  // Timer effect
   useEffect(() => {
     if (timeLeft === null || timeLeft <= 0) return;
 
     const timerId = setInterval(() => {
       setTimeLeft(time => {
-        if (time <= 1) {
+        const newTime = time - 1;
+        if (newTime <= 0) {
           clearInterval(timerId);
-          handleSubmit(new Event('submit'));
+          handleSubmit();
           return 0;
         }
-        return time - 1;
+        // Save state every second
+        saveQuizState(quiz, answers, newTime);
+        return newTime;
       });
     }, 1000);
 
     return () => clearInterval(timerId);
-  }, [timeLeft, handleSubmit]);
+  }, [timeLeft, handleSubmit, quiz, answers, saveQuizState]);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -77,11 +132,24 @@ function TakeQuiz() {
   };
 
   const handleAnswerChange = (questionId, value) => {
-    setAnswers(prevAnswers => ({
-      ...prevAnswers,
+    const newAnswers = {
+      ...answers,
       [questionId]: parseInt(value)
-    }));
+    };
+    setAnswers(newAnswers);
+    // Save state when answer changes
+    saveQuizState(quiz, newAnswers, timeLeft);
   };
+
+  // Add beforeunload event listener
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      saveQuizState(quiz, answers, timeLeft);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [quiz, answers, timeLeft, saveQuizState]);
 
   if (loading) {
     return <CircularProgress />;
@@ -109,7 +177,7 @@ function TakeQuiz() {
         </Typography>
       )}
       <form onSubmit={handleSubmit}>
-      {quiz.questions.map((question) => (
+        {quiz.questions.map((question) => (
           <Box key={question.id} mb={3}>
             <Typography variant="h6">{question.text}</Typography>
             <RadioGroup

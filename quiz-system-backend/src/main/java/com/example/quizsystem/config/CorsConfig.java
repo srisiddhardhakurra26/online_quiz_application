@@ -11,7 +11,8 @@ public class CorsConfig {
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        config.addAllowedOrigin("https://dashing-mousse-6d171a.netlify.app");
+        config.addAllowedOrigin("https://dashing-mousse-6d171a.netlify.app"); // Production
+        config.addAllowedOrigin("http://localhost:3000"); // Local development
         config.addAllowedMethod("*");
         config.addAllowedHeader("*");
         config.setAllowCredentials(true);

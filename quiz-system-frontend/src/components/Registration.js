@@ -17,9 +17,9 @@ const Registration = ({ setIsAuthenticated }) => {
     try {
       const response = await registerUser({ username, email, password });
       console.log('Registration successful:', response.data);
-      setIsAuthenticated(true);
+      //setIsAuthenticated(true);
       alert('Registration successful!');
-      navigate('/');
+      navigate('/login');
     } catch (error) {
       console.error('Registration error:', error.response || error);
       setError(error.response?.data?.message || 'Registration failed. Please try again.');
