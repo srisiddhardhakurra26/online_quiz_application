@@ -14,8 +14,12 @@ public class QuizAttempt {
     private String id;
     private String userId;
     private String quizId;
-    private Map<String, Integer> answers; // Question ID to selected option index
+    private Map<String, Integer> answers;
     private int score;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
+    // Add these new fields
+    private Integer timeLimit;  // in seconds
+    private Integer timeRemaining;  // in seconds
+    private boolean isActive;
 }

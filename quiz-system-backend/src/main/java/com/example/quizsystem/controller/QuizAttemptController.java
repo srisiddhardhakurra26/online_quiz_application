@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,19 +17,69 @@ public class QuizAttemptController {
     @Autowired
     private QuizAttemptService quizAttemptService;
 
+//    @PostMapping("/start")
+//    public ResponseEntity<QuizAttempt> startQuizAttempt(@RequestParam String userId, @RequestParam String quizId) {
+//        QuizAttempt attempt = quizAttemptService.startQuizAttempt(userId, quizId);
+//        return ResponseEntity.ok(attempt);
+//    }
+
     @PostMapping("/start")
-    public ResponseEntity<QuizAttempt> startQuizAttempt(@RequestParam String userId, @RequestParam String quizId) {
-        QuizAttempt attempt = quizAttemptService.startQuizAttempt(userId, quizId);
-        return ResponseEntity.ok(attempt);
+    public ResponseEntity<QuizAttempt> startQuizAttempt(@RequestBody Map<String, Object> request) {
+        try {
+            String userId = (String) request.get("userId");
+            String quizId = (String) request.get("quizId");
+            Integer timeLimit = ((Number) request.get("timeLimit")).intValue();
+
+            System.out.println("Received start quiz request:");
+            System.out.println("userId: " + userId);
+            System.out.println("quizId: " + quizId);
+            System.out.println("timeLimit: " + timeLimit);
+
+            QuizAttempt attempt = quizAttemptService.startQuizAttempt(userId, quizId, timeLimit);
+            return ResponseEntity.ok(attempt);
+        } catch (Exception e) {
+            System.err.println("Error starting quiz: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
-    @PostMapping("/submit/{attemptId}")
-    public ResponseEntity<QuizAttempt> submitQuizAttempt(@PathVariable String attemptId, @RequestBody Map<String, Integer> answers) {
-        QuizAttempt attempt = quizAttemptService.submitQuizAttempt(attemptId, answers);
-        if (attempt != null) {
-            return ResponseEntity.ok(attempt);
+    @GetMapping("/status/{userId}/{quizId}")
+    public ResponseEntity<?> checkAttemptStatus(@PathVariable String userId, @PathVariable String quizId) {
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("hasAttempted", quizAttemptService.hasAttemptedQuiz(userId, quizId));
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{attemptId}/time")
+    public ResponseEntity<Integer> getRemainingTime(@PathVariable String attemptId) {
+        try {
+            Integer timeRemaining = quizAttemptService.getRemainingTime(attemptId);
+            return ResponseEntity.ok(timeRemaining);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.notFound().build();
+    }
+
+//    @PostMapping("/submit/{attemptId}")
+//    public ResponseEntity<QuizAttempt> submitQuizAttempt(@PathVariable String attemptId, @RequestBody Map<String, Integer> answers) {
+//        QuizAttempt attempt = quizAttemptService.submitQuizAttempt(attemptId, answers);
+//        if (attempt != null) {
+//            return ResponseEntity.ok(attempt);
+//        }
+//        return ResponseEntity.notFound().build();
+//    }
+
+    @PostMapping("/submit/{attemptId}")
+    public ResponseEntity<?> submitQuizAttempt(
+            @PathVariable String attemptId,
+            @RequestBody Map<String, Integer> answers) {
+        try {
+            QuizAttempt attempt = quizAttemptService.submitQuizAttempt(attemptId, answers);
+            return ResponseEntity.ok(attempt);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @GetMapping("/user/{userId}")

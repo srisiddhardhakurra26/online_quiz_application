@@ -69,6 +69,7 @@ public class SecurityConfig {
                     auth
                             .requestMatchers("/api/auth/**").permitAll()
                             .requestMatchers("/api/public/**").permitAll()
+                            .requestMatchers("/api/quiz-attempts/**").authenticated()
                             .requestMatchers("/error").permitAll() // Allow error endpoint
                             .requestMatchers("/api/auth/signin").permitAll() // Explicitly permit signin
                             .requestMatchers("/api/auth/signup").permitAll() // Explicitly permit signup

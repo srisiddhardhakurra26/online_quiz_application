@@ -84,6 +84,43 @@ export const createQuiz = async (quizData) => {
   }
 };
 
+export const checkQuizAttemptStatus = async (userId, quizId) => {
+  try {
+    const response = await api.get(`/quiz-attempts/status/${userId}/${quizId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error checking quiz attempt status:', error);
+    throw error;
+  }
+};
+
+export const startQuizAttempt = async (userId, quizId, timeLimit) => {
+  try {
+    const response = await api.post('/quiz-attempts/start', {
+      userId,
+      quizId,
+      timeLimit
+    });
+    console.log('Start quiz attempt response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error starting quiz attempt:', error);
+    const errorMessage = error.response?.data?.message || error.message;
+    throw new Error(errorMessage);
+  }
+};
+
+export const getRemainingTime = async (attemptId) => {
+  try {
+    const response = await api.get(`/quiz-attempts/${attemptId}/time`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting remaining time:', error);
+    const errorMessage = error.response?.data?.message || error.message;
+    throw new Error(errorMessage);
+  }
+};
+
 export const updateQuiz = async (quizData) => {
   try {
     const response = await api.put(`/quizzes/${quizData.id}`, quizData);
@@ -97,16 +134,15 @@ export const updateQuiz = async (quizData) => {
 
 export const deleteQuiz = (id) => api.delete(`/quizzes/${id}`);
 
-export const submitQuiz = async (id, answers, userId) => {
+export const submitQuizAttempt = async (attemptId, answers) => {
   try {
-    console.log('Submitting quiz:', id, 'with answers:', answers, 'for user:', userId);
-    const submission = { quizId: id, answers: answers };
-    const response = await api.post(`/quizzes/${id}/submit?userId=${userId}`, submission);
-    console.log('Quiz submission response:', response.data);
+    const response = await api.post(`/quiz-attempts/submit/${attemptId}`, answers);
+    console.log('Submit quiz attempt response:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error submitting quiz:', error.response || error);
-    throw error;
+    console.error('Error submitting quiz attempt:', error);
+    const errorMessage = error.response?.data?.message || error.message;
+    throw new Error(errorMessage);
   }
 };
 
