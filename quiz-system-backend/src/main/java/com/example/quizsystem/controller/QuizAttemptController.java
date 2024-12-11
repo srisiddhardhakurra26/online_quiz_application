@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/quiz-attempts")
@@ -42,6 +43,27 @@ public class QuizAttemptController {
             e.printStackTrace();
             throw e;
         }
+    }
+
+    @GetMapping("/{quizId}/user/{userId}/attempt")
+    public ResponseEntity<Map<String, Object>> getUserQuizAttempt(
+            @PathVariable String quizId,
+            @PathVariable String userId) {
+
+        List<QuizAttempt> attempts = quizAttemptService.getAttemptsByUser(userId)
+                .stream()
+                .filter(a -> a.getQuizId().equals(quizId) && !a.isActive())
+                .collect(Collectors.toList());
+
+        Map<String, Object> response = new HashMap<>();
+        if (!attempts.isEmpty()) {
+            response.put("hasAttempted", true);
+            response.put("score", attempts.get(0).getScore());
+        } else {
+            response.put("hasAttempted", false);
+        }
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/status/{userId}/{quizId}")

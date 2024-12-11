@@ -1,61 +1,98 @@
 import React, { useState } from 'react';
 import { registerUser } from '../api';
 import { useNavigate } from 'react-router-dom';
+import './Login.css'; // Reusing the same CSS file
 
-const Registration = ({ setIsAuthenticated }) => {
+const Registration = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleInputChange = (setter) => (e) => {
+    setError('');
+    setter(e.target.value);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
+    setLoading(true);
+    
     try {
       const response = await registerUser({ username, email, password });
       console.log('Registration successful:', response.data);
-      //setIsAuthenticated(true);
       alert('Registration successful!');
       navigate('/login');
     } catch (error) {
-      console.error('Registration error:', error.response || error);
-      setError(error.response?.data?.message || 'Registration failed. Please try again.');
+      console.error('Registration error:', error);
+      setError(
+        error.response?.data?.message || 
+        'Registration failed. Please try again.'
+      );
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="text"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder="Username"
-        required
-      />
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email"
-        required
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        required
-      />
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <button type="submit" disabled={isLoading}>
-        {isLoading ? 'Registering...' : 'Register'}
-      </button>
-    </form>
+    <div className="login-container">
+      <form onSubmit={handleSubmit} className="login-form">
+        <h2>Register</h2>
+        
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
+
+        <div className="form-group">
+          <input
+            type="text"
+            value={username}
+            onChange={handleInputChange(setUsername)}
+            placeholder="Username"
+            disabled={loading}
+            required
+            className="form-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <input
+            type="email"
+            value={email}
+            onChange={handleInputChange(setEmail)}
+            placeholder="Email"
+            disabled={loading}
+            required
+            className="form-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <input
+            type="password"
+            value={password}
+            onChange={handleInputChange(setPassword)}
+            placeholder="Password"
+            disabled={loading}
+            required
+            className="form-input"
+          />
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={loading}
+          className="login-button"
+        >
+          {loading ? 'Registering...' : 'Register'}
+        </button>
+      </form>
+    </div>
   );
 };
 

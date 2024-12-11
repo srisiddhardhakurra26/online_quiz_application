@@ -4,7 +4,8 @@ import {
   getQuizById, 
   startQuizAttempt,
   getRemainingTime, 
-  submitQuizAttempt 
+  submitQuizAttempt,
+  getUserAttempt
 } from '../api';
 import { 
   Container, Typography, Radio, RadioGroup, FormControlLabel, 
@@ -19,12 +20,33 @@ function TakeQuiz() {
   const [timeLeft, setTimeLeft] = useState(null);
   const [attemptId, setAttemptId] = useState(null);
   const [hasAttempted, setHasAttempted] = useState(false);
+  const [score, setScore] = useState(null);
   const timerRef = useRef(null);
   const initializingRef = useRef(false);
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Load saved answers on mount
+  // Check attempt status first
+  useEffect(() => {
+    const checkAttemptStatus = async () => {
+      try {
+        const data = await getUserAttempt(id, localStorage.getItem('userId'));
+        if (data.hasAttempted) {
+          setHasAttempted(true);
+          setScore(data.score);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error checking attempt status:', error);
+        if (error.response?.status === 400) {
+          setHasAttempted(true);
+          setLoading(false);
+        }
+      }
+    };
+    checkAttemptStatus();
+  }, [id]);
+
   useEffect(() => {
     const savedAnswers = localStorage.getItem(`quiz_answers_${id}`);
     if (savedAnswers) {
@@ -45,7 +67,6 @@ function TakeQuiz() {
     
     try {
       const result = await submitQuizAttempt(attemptId, answers);
-      // Clear saved answers after successful submission
       localStorage.removeItem(`quiz_answers_${id}`);
       localStorage.removeItem(`quiz_attempt_${id}`);
       
@@ -71,6 +92,10 @@ function TakeQuiz() {
   }, [attemptId, answers, id, navigate, quiz]);
 
   useEffect(() => {
+    if (hasAttempted) {
+      return; // Don't initialize if already attempted
+    }
+
     const initializeQuiz = async () => {
       if (initializingRef.current) return;
       initializingRef.current = true;
@@ -90,7 +115,6 @@ function TakeQuiz() {
               setLoading(false);
               return;
             } else {
-              // Clear saved data if time has expired
               localStorage.removeItem(`quiz_attempt_${id}`);
               localStorage.removeItem(`quiz_answers_${id}`);
               throw new Error('Previous attempt has expired');
@@ -138,7 +162,7 @@ function TakeQuiz() {
         clearInterval(timerRef.current);
       }
     };
-  }, [id]);
+  }, [id, hasAttempted]);
 
   useEffect(() => {
     if (timeLeft === null || loading) return;
@@ -205,10 +229,8 @@ function TakeQuiz() {
       [questionId]: parseInt(value)
     };
     setAnswers(newAnswers);
-    // Save answers to localStorage whenever they change
     localStorage.setItem(`quiz_answers_${id}`, JSON.stringify(newAnswers));
   };
-
 
   if (loading) {
     return (
@@ -223,13 +245,10 @@ function TakeQuiz() {
       <Container maxWidth="md">
         <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
           <Alert severity="info" sx={{ mb: 2 }}>
-            You have already attempted this quiz
+            You have already attempted this quiz. Your score: {score !== null ? score : 'Loading...'}
           </Alert>
           <Typography variant="h5" gutterBottom>
             {quiz?.title || 'Quiz'}
-          </Typography>
-          <Typography variant="body1" paragraph>
-            Multiple attempts are not allowed for this quiz.
           </Typography>
           <Button 
             variant="contained" 

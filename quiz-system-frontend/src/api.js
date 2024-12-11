@@ -72,6 +72,16 @@ export const getQuizById = async (id) => {
     throw error;
   }
 };
+
+export const getUserAttempt = async (quizId, userId) => {
+  try {
+    const response = await api.get(`/quiz-attempts/${quizId}/user/${userId}/attempt`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching attempt:', error);
+    throw error;
+  }
+};
 // export const createQuiz = (quiz) => api.post('/quizzes', quiz);
 export const createQuiz = async (quizData) => {
   console.log('Data received in createQuiz:', quizData);
